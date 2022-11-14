@@ -1,0 +1,266 @@
+SECTION INTVEC
+B main
+
+SECTION CODE
+; Question 1
+adresseDebut
+
+; ------------------------------------------------------------------------
+; Fonction fonctionMystere
+; ------------------------------------------------------------------------
+; Question 2
+fonctionMystere
+
+MOV R1, #0
+; Question 3
+MOV R2, #0x80000000
+; Question 4
+LSR R2, R2, #20
+; Question 5
+ASR R2, R2, #11
+
+; Question 6
+ADD R7, PC, #-4
+
+boucleInterne
+
+; Question 7
+MOV LR, PC
+BX R8
+
+; Question 8
+ADDS  R1, R1, R2
+
+; Question 9 et 10
+MOVCS R1, #0
+MOVCS R2, #1
+
+MOV LR, PC
+BX R9
+
+CMP R0, #1
+ADDEQ R1, R1, #1
+
+; Question 11
+adresseFin
+MOV PC, R7
+; ------------------------------------------------------------------------
+; Fin de la fonction fonctionMystere
+; ------------------------------------------------------------------------
+
+
+; ------------------------------------------------------------------------
+; Code principal
+; ------------------------------------------------------------------------
+main
+
+; Préparons une pile
+LDR SP, =maPile
+; Question 12
+ADD SP, SP, #32
+
+; Test de la fonction EchangeRegistres
+MOV R1, #7
+MOV R2, #12
+BL EchangeRegistres
+ASSERT R1=12,R2=7
+
+; Ne pas enlever cette ligne: ${TEST_ER}
+
+; Tests de la fonction EstMultiple
+MOV R1, #6
+BL EstMultiple
+ASSERT R0=0
+
+MOV R1, #8
+BL EstMultiple
+ASSERT R0=1
+
+MOV R1, #15
+BL EstMultiple
+ASSERT R0=0
+
+MOV R1, #16
+BL EstMultiple
+ASSERT R0=1
+
+; Autre test de la fonction EstMultiple avec un nombre plus grand.
+; Le nombre de cycles nécessaires pour calculer ne devrait pas dépendre
+; de la taille du nombre donné en entrée!
+MOV R1, #0x120000
+BL EstMultiple
+ASSERT R0=1
+
+; Ne pas enlever cette ligne: ${TEST_EP}
+
+
+; Test de la fonction CopieMemoire
+LDR R1, =varTestCopieMemoire
+ADD R2, R1, #0x8
+LDR R0, =espaceTestCopieMemoire
+BL CopieMemoire
+ASSERT 0x1010=0x67,0x1011=0x45,0x1012=0x23,0x1013=0x01
+ASSERT 0x1014=0xAB,0x1015=0x89,0x1016=0x67,0x1017=0x45
+ASSERT 0x1018=0xBC,0x1019=0x9A,0x101A=0x78,0x101B=0x56
+ASSERT 0x101C=0x0
+
+; Ne pas enlever cette ligne: ${TEST_CM}
+
+; Copier EchangeRegistres en mémoire
+LDR R1, =EchangeRegistres
+LDR R2, =FinEchangeRegistres
+LDR R0, =echangeRegistresEnRAM
+BL CopieMemoire
+
+; Test de EchangeRegistres en mémoire
+MOV R1, #98
+MOV R2, #35
+BL echangeRegistresEnRAM
+ASSERT R1=35,R2=98
+
+; Copier EstMultiple en mémoire
+LDR R1, =EstMultiple
+LDR R2, =FinEstMultiple
+LDR R0, =estMultipleEnRAM
+BL CopieMemoire
+
+; Test de EstMultiple en mémoire
+MOV R1, #16
+BL estMultipleEnRAM
+ASSERT R0=1
+
+; Charger l'adresse de fonctions dans R8 et R9
+; NE PAS MODIFIER R8, R9, NI R10!
+LDR R8, =echangeRegistresEnRAM
+LDR R9, =estMultipleEnRAM
+
+; Effectuer une copie mémoire
+LDR R1, =CopieMemoire
+LDR R2, =FinCopieMemoire
+LDR R0, =copieMemoireEnRAM
+
+; Question 13
+BL CopieMemoire
+
+; Effectuer une copie mémoire
+; Question 14
+LDR R1, =adresseDebut
+LDR R2, =adresseFin
+LDR R0, =fonctionEnRAM
+
+; Question 15 et 16
+BL copieMemoireEnRAM
+
+; Question 17
+MOV PC, R0
+; ------------------------------------------------------------------------
+; Fin du code principal
+; ------------------------------------------------------------------------
+
+; ------------------------------------------------------------------------
+; Fonction EchangeRegistres
+; ------------------------------------------------------------------------
+EchangeRegistres
+; La fonction EchangeRegistres échange les registres R1 et R2, sans 
+; toutefois modifier le contenu d'autres registres. 
+
+; Écrivez le code de votre fonction EchangeRegistres ici.
+PUSH {R3}
+MOV R3, R1
+MOV R1, R2
+MOV R2, R3
+POP {R3}
+
+FinEchangeRegistres ; ne rien écrire entre FinEchangeRegistres et BX LR
+BX LR
+; ------------------------------------------------------------------------
+; Fin de la fonction EchangeRegistres
+; ------------------------------------------------------------------------
+
+; ------------------------------------------------------------------------
+; Fonction EstMultiple
+; ------------------------------------------------------------------------
+EstMultiple
+; La fonction EstMultiple détermine si le nombre placé dans R1 est 
+; un multiple de 8 ou non. 
+; S'il est un multiple de 8, elle place 1 dans R0.
+; Sinon, elle place 0 dans R0.
+
+; Écrivez le code de votre fonction EstMultiple ici.
+PUSH {R2}
+MOV R2, R1
+TST R2, #7
+MOVEQ R0, #1
+MOVNE R0, #0
+POP {R2}
+
+FinEstMultiple ; ne rien écrire entre FinEstMultiple et BX LR
+BX LR
+; ------------------------------------------------------------------------
+; Fin de la fonction EstMultiple
+; ------------------------------------------------------------------------
+
+
+; ------------------------------------------------------------------------
+; Fonction CopieMemoire
+; ------------------------------------------------------------------------
+CopieMemoire
+; La fonction CopieMemoire reçoit les paramètres suivants:
+; R0: Adresse de destination
+; R1: Adresse du premier mot de 32 bits à copier
+; R2: Adresse du dernier mot de 32 bits à copier
+
+; Écrivez le code de votre fonction CopieMemoire ici.
+PUSH {R0, R1, R2}
+
+CMP R2, R1
+BLT FinCopieMemoire
+BEQ Egal
+BGT AdressesValide
+
+Egal
+LDR R1, [R1]
+STR R1, [R0]
+B finEgal
+
+AdressesValide
+boucleCopieMemoire
+LDR R3, [R1], #4
+STR R3, [R0], #4
+CMP R2, R1
+BGE boucleCopieMemoire
+
+
+finEgal
+POP {R0, R1, R2}
+
+FinCopieMemoire ; ne rien écrire entre FinCopieMemoire et BX LR
+BX LR
+; ------------------------------------------------------------------------
+; Fin de la fonction CopieMemoire
+; ------------------------------------------------------------------------
+
+
+SECTION DATA
+
+stockageTemporaire1     ALLOC32 1
+
+varTestCopieMemoire     ASSIGN32 0x01234567, 0x456789AB, 0x56789ABC
+espaceTestCopieMemoire  ALLOC32 3
+
+stockageTemporaire2     ASSIGN32 0
+
+; Espace mémoire pour les fonctions
+echangeRegistresEnRAM   ALLOC32 16
+estMultipleEnRAM        ALLOC32 16
+copieMemoireEnRAM       ALLOC32 32
+
+; Question 18
+fonctionEnRAM           ALLOC32 32
+
+; Question 19
+maPile                  ALLOC32 8
+
+; Ne pas enlever cette ligne: ${TEST_DATA}
+
+
